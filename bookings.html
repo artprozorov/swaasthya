@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Календарь бронирования - Клиника</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            padding: 25px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .control-group label {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        select, input[type="date"], input[type="month"] {
+            padding: 10px 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        select:focus, input[type="date"]:focus, input[type="month"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+
+        .calendar-container {
+            padding: 25px;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 18px;
+            color: #6c757d;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            margin: 20px;
+            border-radius: 8px;
+            border: 1px solid #f5c6cb;
+        }
+
+        .calendar-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+        }
+
+        .calendar-table th {
+            background: #667eea;
+            color: white;
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .calendar-table th:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 11;
+            background: #5568d3;
+        }
+
+        .calendar-table td {
+            border: 1px solid #dee2e6;
+            padding: 12px;
+            text-align: center;
+            min-width: 100px;
+            vertical-align: middle;
+        }
+
+        .calendar-table td:first-child {
+            position: sticky;
+            left: 0;
+            background: #f8f9fa;
+            font-weight: 600;
+            z-index: 9;
+            white-space: nowrap;
+        }
+
+        .booking {
+            background: #e7f3ff;
+            border-left: 4px solid #667eea;
+            padding: 8px;
+            margin: 2px;
+            border-radius: 4px;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .booking:hover {
+            background: #d0e7ff;
+        }
+
+        .date-cell {
+            font-weight: 600;
+            color: #495057;
+            text-align: left;
+            padding-left: 15px;
+        }
+
+        .room-cell {
+            vertical-align: middle;
+        }
+
+        .occupied {
+            background: #ffeaa7;
+            border-left-color: #fdcb6e;
+        }
+
+        .calendar-table td:not(:first-child) {
+            min-width: 100px;
+        }
+
+        .calendar-table tbody tr {
+            height: 60px;
+        }
+
+        .booking-form-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .booking-form-modal.active {
+            display: flex;
+        }
+
+        .booking-form {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .booking-form h2 {
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .empty-cell {
+            color: #adb5bd;
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .control-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .calendar-container {
+                padding: 10px;
+            }
+
+            .calendar-table {
+                font-size: 12px;
+            }
+
+            .calendar-table th,
+            .calendar-table td {
+                padding: 8px;
+            }
+
+            .calendar-table td:first-child {
+                min-width: auto;
+                font-size: 11px;
+            }
+
+            .calendar-table td:not(:first-child) {
+                min-width: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📅 Календарь бронирования</h1>
+            <p>Просмотр доступности комнат в клинике</p>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="startDate">Месяц:</label>
+                <input type="month" id="startDate" onchange="updateCalendar()">
+            </div>
+
+            <div class="control-group">
+                <button onclick="prevMonth()">← Предыдущий месяц</button>
+                <button onclick="currentMonth()">Текущий месяц</button>
+                <button onclick="nextMonth()">Следующий месяц →</button>
+            </div>
+
+            <div class="control-group" style="display: none;">
+                <button onclick="openBookingForm()" style="background: #28a745;">
+                    📧 Забронировать
+                </button>
+            </div>
+        </div>
+
+        <div class="calendar-container">
+            <div id="loading" class="loading">
+                Загрузка данных...
+            </div>
+            <div id="error" class="error" style="display: none;"></div>
+            <div id="calendar" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- Modal для формы бронирования -->
+    <div id="bookingModal" class="booking-form-modal">
+        <div class="booking-form">
+            <h2>Отправить заявку на бронирование</h2>
+            <form id="bookingForm" onsubmit="sendBookingRequest(event)">
+                <div class="form-group">
+                    <label for="bookingDate">Дата бронирования:</label>
+                    <input type="date" id="bookingDate" name="bookingDate" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="bookingRoom">Комната:</label>
+                    <select id="bookingRoom" name="bookingRoom" required>
+                        <option value="">Выберите комнату...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="bookingName">Ваше имя:</label>
+                    <input type="text" id="bookingName" name="bookingName" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="bookingEmail">Ваш email:</label>
+                    <input type="email" id="bookingEmail" name="bookingEmail" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="bookingPhone">Телефон:</label>
+                    <input type="tel" id="bookingPhone" name="bookingPhone" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="bookingNotes">Дополнительная информация:</label>
+                    <textarea id="bookingNotes" name="bookingNotes" placeholder="Укажите любые дополнительные детали..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="recipientEmail">Email получателя:</label>
+                    <input type="email" id="recipientEmail" name="recipientEmail" placeholder="email@example.com" required>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="closeBookingForm()">Отмена</button>
+                    <button type="submit">Отправить заявку</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Конфигурация
+        // JSON API endpoint для получения данных бронирования
+        const JSON_API_URL = 'https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLhdJa8A6gGkidkDhgzfeFG78Sai5CLwcgo9DqcNOnzMziCAN8wQPsHrPxbsmttprY2BFOx-ZBf7iWCyaRAz8jzrN4taFZZd7VfV_LrBRLfh39tGlZLKNFjnGcqcskPiP8p2BPkiDCBhc7CcbEnZNuzrzyNu8smemFq7UPcEdf2Mj3oc6EU6Sd0qA_jtgP55KBlvnHCm0bnJApkXKiIHn9fiS1LNSsIJk91xnrQwc47YBuEtyWaF4TuxgQUAM0XJvYadCFc_mni5UJ3g-i0F9HYWr9sJRys1TwALMhcf&lib=MGTsziAHfjwhGehBTxGbzrA5sAQzR7ekx';
+        
+        let bookingsData = [];
+        let rooms = [];
+        let currentStartDate = new Date();
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date();
+            currentStartDate = new Date(today.getFullYear(), today.getMonth(), 1); // Первый день текущего месяца
+            
+            // Устанавливаем значение для input type="month" (формат: YYYY-MM)
+            const monthInput = document.getElementById('startDate');
+            const year = currentStartDate.getFullYear();
+            const month = String(currentStartDate.getMonth() + 1).padStart(2, '0');
+            monthInput.value = `${year}-${month}`;
+            
+            loadBookings();
+        });
+
+        // Загрузка данных из Google Sheets через JSON API
+        async function loadBookings() {
+            const loadingEl = document.getElementById('loading');
+            const errorEl = document.getElementById('error');
+            const calendarEl = document.getElementById('calendar');
+            
+            loadingEl.style.display = 'block';
+            errorEl.style.display = 'none';
+            calendarEl.style.display = 'none';
+
+            try {
+                const response = await fetch(JSON_API_URL);
+                if (!response.ok) {
+                    throw new Error(`HTTP ошибка! статус: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (!Array.isArray(data)) {
+                    throw new Error('Неправильный формат данных. Ожидается массив объектов.');
+                }
+                
+                bookingsData = data;
+                rooms = extractRooms(data);
+                populateRoomSelect();
+                
+                loadingEl.style.display = 'none';
+                calendarEl.style.display = 'block';
+                updateCalendar();
+                
+            } catch (error) {
+                console.error('Ошибка загрузки:', error);
+                loadingEl.style.display = 'none';
+                errorEl.style.display = 'block';
+                errorEl.innerHTML = `
+                    <strong>Ошибка загрузки данных:</strong> ${error.message}<br><br>
+                    <strong>Решения:</strong><br>
+                    1. Проверьте подключение к интернету<br>
+                    2. Проверьте правильность URL API в коде<br>
+                    3. Проверьте консоль браузера (F12) для подробностей<br>
+                    4. Убедитесь, что JSON API возвращает корректные данные
+                `;
+            }
+        }
+
+        // Извлечение списка комнат из JSON данных
+        function extractRooms(data) {
+            if (data.length === 0) return [];
+            
+            // Получаем все ключи из первого объекта, исключая DATE
+            const headers = Object.keys(data[0]);
+            // Исключаем поле DATE, остальные - комнаты
+            return headers.filter(room => room !== 'DATE' && room.trim() !== '');
+        }
+
+        // Обновление календаря
+        function updateCalendar() {
+            const startDateInput = document.getElementById('startDate');
+            if (startDateInput.value) {
+                // Парсим значение из input type="month" (формат: YYYY-MM)
+                const [year, month] = startDateInput.value.split('-');
+                currentStartDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+            }
+            
+            renderCalendar();
+        }
+
+        // Отображение календаря
+        function renderCalendar() {
+            const calendarEl = document.getElementById('calendar');
+            
+            const endDate = new Date(currentStartDate);
+            endDate.setMonth(endDate.getMonth() + 1);
+            endDate.setDate(0); // Последний день месяца
+            
+            // Формируем список дат
+            const dates = [];
+            const date = new Date(currentStartDate);
+            while (date <= endDate) {
+                dates.push(new Date(date));
+                date.setDate(date.getDate() + 1);
+            }
+            
+            // Начинаем построение таблицы
+            let html = '<table class="calendar-table"><thead><tr><th>Дата</th>';
+            
+            // Заголовки с комнатами
+            rooms.forEach(room => {
+                html += `<th>${room}</th>`;
+            });
+            
+            html += '</tr></thead><tbody>';
+            
+            // Строки для каждой даты
+            dates.forEach(day => {
+                const dayStr = formatDate(day);
+                const dateStr = day.toLocaleDateString('ru-RU', { 
+                    weekday: 'short', 
+                    day: 'numeric', 
+                    month: 'short' 
+                });
+                
+                html += `<tr><td class="date-cell">${dateStr}</td>`;
+                
+                // Ячейки для каждой комнаты на эту дату
+                rooms.forEach(room => {
+                    const isOccupied = isRoomOccupied(room, dayStr);
+                    
+                    html += '<td class="room-cell">';
+                    
+                    if (isOccupied) {
+                        // Обезличивание: показываем только статус занятости
+                        html += '<div class="booking occupied">Занято</div>';
+                    } else {
+                        html += '<div class="empty-cell">Свободно</div>';
+                    }
+                    
+                    html += '</td>';
+                });
+                
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            calendarEl.innerHTML = html;
+        }
+
+        // Проверка, занята ли комната на указанную дату
+        function isRoomOccupied(room, dateStr) {
+            for (const row of bookingsData) {
+                const rowDate = row.DATE;
+                const formattedRowDate = formatDateStr(rowDate);
+                
+                // Проверяем, что дата совпадает
+                if (formattedRowDate === dateStr) {
+                    const roomStatus = row[room];
+                    // Комната занята, если значение === true
+                    if (roomStatus === true) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // Получение бронирований для комнаты и даты (оставлено для обратной совместимости)
+        function getBookingsForRoomAndDate(room, dateStr) {
+            return bookingsData.filter(row => {
+                const rowDate = row.DATE;
+                const formattedRowDate = formatDateStr(rowDate);
+                
+                // Проверяем, что дата совпадает и комната занята (true)
+                if (formattedRowDate !== dateStr) return false;
+                
+                const roomStatus = row[room];
+                // Комната занята, если значение === true
+                return roomStatus === true;
+            });
+        }
+
+        // Форматирование даты
+        function formatDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        // Форматирование строки даты (работа с ISO форматом из JSON)
+        function formatDateStr(dateValue) {
+            if (!dateValue) return '';
+            
+            let date;
+            
+            // Если это уже объект Date
+            if (dateValue instanceof Date) {
+                date = dateValue;
+            }
+            // Если это ISO строка (например, "2025-12-31T21:00:00.000Z")
+            else if (typeof dateValue === 'string') {
+                date = new Date(dateValue);
+            }
+            else {
+                return '';
+            }
+            
+            if (isNaN(date.getTime())) {
+                return '';
+            }
+            
+            // Возвращаем дату в формате YYYY-MM-DD (только дата, без времени)
+            return formatDate(date);
+        }
+
+        // Навигация по месяцам
+        function prevMonth() {
+            currentStartDate.setMonth(currentStartDate.getMonth() - 1);
+            currentStartDate.setDate(1);
+            
+            const monthInput = document.getElementById('startDate');
+            const year = currentStartDate.getFullYear();
+            const month = String(currentStartDate.getMonth() + 1).padStart(2, '0');
+            monthInput.value = `${year}-${month}`;
+            
+            updateCalendar();
+        }
+
+        function nextMonth() {
+            currentStartDate.setMonth(currentStartDate.getMonth() + 1);
+            currentStartDate.setDate(1);
+            
+            const monthInput = document.getElementById('startDate');
+            const year = currentStartDate.getFullYear();
+            const month = String(currentStartDate.getMonth() + 1).padStart(2, '0');
+            monthInput.value = `${year}-${month}`;
+            
+            updateCalendar();
+        }
+
+        function currentMonth() {
+            const today = new Date();
+            currentStartDate = new Date(today.getFullYear(), today.getMonth(), 1);
+            
+            const monthInput = document.getElementById('startDate');
+            const year = currentStartDate.getFullYear();
+            const month = String(currentStartDate.getMonth() + 1).padStart(2, '0');
+            monthInput.value = `${year}-${month}`;
+            
+            updateCalendar();
+        }
+
+        // Работа с формой бронирования
+        function populateRoomSelect() {
+            const select = document.getElementById('bookingRoom');
+            select.innerHTML = '<option value="">Выберите комнату...</option>';
+            
+            rooms.forEach(room => {
+                const option = document.createElement('option');
+                option.value = room;
+                option.textContent = room;
+                select.appendChild(option);
+            });
+        }
+
+        function openBookingForm() {
+            document.getElementById('bookingModal').classList.add('active');
+            // Установить сегодняшнюю дату по умолчанию
+            document.getElementById('bookingDate').valueAsDate = new Date();
+        }
+
+        function closeBookingForm() {
+            document.getElementById('bookingModal').classList.remove('active');
+            document.getElementById('bookingForm').reset();
+        }
+
+        function sendBookingRequest(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const bookingDate = formData.get('bookingDate');
+            const bookingRoom = formData.get('bookingRoom');
+            const bookingName = formData.get('bookingName');
+            const bookingEmail = formData.get('bookingEmail');
+            const bookingPhone = formData.get('bookingPhone');
+            const bookingNotes = formData.get('bookingNotes');
+            const recipientEmail = formData.get('recipientEmail');
+            
+            // Format email subject and body
+            const subject = encodeURIComponent(`Заявка на бронирование - ${bookingRoom}`);
+            const body = encodeURIComponent(
+                `Заявка на бронирование\n\n` +
+                `Дата: ${bookingDate}\n` +
+                `Комната: ${bookingRoom}\n` +
+                `Имя: ${bookingName}\n` +
+                `Email: ${bookingEmail}\n` +
+                `Телефон: ${bookingPhone}\n` +
+                `${bookingNotes ? `Дополнительная информация: ${bookingNotes}` : ''}`
+            );
+            
+            // Открытие почтового клиента
+            const mailtoLink = `mailto:${recipientEmail}?subject=${subject}&body=${body}`;
+            window.location.href = mailtoLink;
+            
+            // Закрытие формы
+            closeBookingForm();
+            
+            // Показ сообщения об успехе
+            alert('Заявка отправлена! Откроется ваш почтовый клиент.');
+        }
+    </script>
+</body>
+</html>
