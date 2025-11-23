@@ -325,7 +325,7 @@
         <div class="controls">
             <div class="control-group">
                 <label for="startDate">Месяц:</label>
-                <input type="month" id="startDate" onchange="updateCalendar()">
+                <input type="month" id="startDate" min="2026-01" onchange="updateCalendar()">
             </div>
 
             <div class="control-group">
@@ -409,10 +409,18 @@
         let rooms = [];
         let currentStartDate = new Date();
 
+        // Минимальная дата - январь 2026
+        const MIN_DATE = new Date(2026, 0, 1); // Январь 2026
+        
         // Инициализация
         document.addEventListener('DOMContentLoaded', function() {
             const today = new Date();
-            currentStartDate = new Date(today.getFullYear(), today.getMonth(), 1); // Первый день текущего месяца
+            // Если текущая дата раньше января 2026, устанавливаем январь 2026
+            if (today < MIN_DATE) {
+                currentStartDate = new Date(MIN_DATE);
+            } else {
+                currentStartDate = new Date(today.getFullYear(), today.getMonth(), 1); // Первый день текущего месяца
+            }
             
             // Устанавливаем значение для input type="month" (формат: YYYY-MM)
             const monthInput = document.getElementById('startDate');
@@ -484,7 +492,17 @@
             if (startDateInput.value) {
                 // Парсим значение из input type="month" (формат: YYYY-MM)
                 const [year, month] = startDateInput.value.split('-');
-                currentStartDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+                const selectedDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+                
+                // Проверяем, что выбранная дата не раньше минимальной
+                if (selectedDate < MIN_DATE) {
+                    currentStartDate = new Date(MIN_DATE);
+                    const year = currentStartDate.getFullYear();
+                    const month = String(currentStartDate.getMonth() + 1).padStart(2, '0');
+                    startDateInput.value = `${year}-${month}`;
+                } else {
+                    currentStartDate = selectedDate;
+                }
             }
             
             renderCalendar();
@@ -616,15 +634,21 @@
 
         // Навигация по месяцам
         function prevMonth() {
-            currentStartDate.setMonth(currentStartDate.getMonth() - 1);
-            currentStartDate.setDate(1);
+            const newDate = new Date(currentStartDate);
+            newDate.setMonth(newDate.getMonth() - 1);
+            newDate.setDate(1);
             
-            const monthInput = document.getElementById('startDate');
-            const year = currentStartDate.getFullYear();
-            const month = String(currentStartDate.getMonth() + 1).padStart(2, '0');
-            monthInput.value = `${year}-${month}`;
-            
-            updateCalendar();
+            // Проверяем, что не переходим раньше минимальной даты
+            if (newDate >= MIN_DATE) {
+                currentStartDate = newDate;
+                
+                const monthInput = document.getElementById('startDate');
+                const year = currentStartDate.getFullYear();
+                const month = String(currentStartDate.getMonth() + 1).padStart(2, '0');
+                monthInput.value = `${year}-${month}`;
+                
+                updateCalendar();
+            }
         }
 
         function nextMonth() {
@@ -641,7 +665,12 @@
 
         function currentMonth() {
             const today = new Date();
-            currentStartDate = new Date(today.getFullYear(), today.getMonth(), 1);
+            // Если текущая дата раньше января 2026, устанавливаем январь 2026
+            if (today < MIN_DATE) {
+                currentStartDate = new Date(MIN_DATE);
+            } else {
+                currentStartDate = new Date(today.getFullYear(), today.getMonth(), 1);
+            }
             
             const monthInput = document.getElementById('startDate');
             const year = currentStartDate.getFullYear();
